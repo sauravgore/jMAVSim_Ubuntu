@@ -1,27 +1,25 @@
 ## jMAVSim ##
 
+#### Simple multirotor simulator with MAVLink protocol support
+
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/DrTon/jMAVSim?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Simple multirotor simulator with MAVLink protocol support
+![Flying with AutoQuad and jMAVSim, April 1, 2016](https://github.com/mpaperno/jMAVSim/wiki/img/jMAVSim_apr_1_ground.jpg)
+
 
 ### Installation ###
 
-Requirements:
- * Java 6 or newer (JDK, http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+Note: check the new [Wiki](../../wiki/) for more information and [Releases](../../releases/) for (possible) pre-built binaries.
 
- * Java3D and JOGL/JOAL jars, including native libs for Linux (i586/64bit), Windows (i586/64bit) and Mac OS (universal) already included in this repository, no need to install it.
+Requirements:
+ * Java 7 or newer (JDK, http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+ * [Apache Ant](http://ant.apache.org/) for building using the included build.xml file.  
+     Eg. on OS X with Homebrew: `brew install ant`
 
 Clone repository and initialize submodules:
 ```
 git clone https://github.com/mpaperno/jMAVSim.git
-git submodule init
-git submodule update
-```
-
-Install prerequisites via HomeBrew:
-
-```
-brew install ant
+git submodule update --init
 ```
 
 Compile:
@@ -89,17 +87,18 @@ java -Djava.ext.dirs= -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simu
 
 #### Serial port
 
-Serial port access is common problem. Make sure to hardcode correct port in Simulator.java:
+Serial port access is common problem. Make sure to pass the correct port on the command line:
 ```
-serialMAVLinkPort.open("/dev/tty.usbmodem1", 230400, 8, 1, 0);
+java -jar jmavsim_run.jar -serial /dev/tty.usbmodem1 230400
 ```
-(Baudrate for USB ACM ports (that PX4 uses) has no effect, you can use any value)
+(Baudrate for USB ACM ports (that PX4 uses) has no effect, you can use any value.)
+(For AutoQuad USB port, always use baud rate of 2400.)
 
 Usually port is:
 ```
 Mac OS: /dev/tty.usbmodem1
 Linux: /dev/ttyACM0
-Windows: COM15
+Windows: COM15 (varies)
 ```
 
 On **Linux** you may also get `Permission denied` error, add your user to `dialout` group and relogin, or just run as root.
@@ -119,7 +118,7 @@ New vehicle types (e.g. non standard multirotors configurations) can be added ve
 (But for fixed wing you will need some more aerodynamics knowledge).
 See files under `src/me/drton/jmavsim/vehicle/` as examples.
 
-The camera can be placed on any point, including gimabal, that can be controlled by autopilot, see `CameraGimbal2D` class and usage example (commented) in Simulator.java.
+The camera can be placed on any point, including gimabal, that can be controlled by autopilot, see `CameraGimbal2D` class and usage example in Simulator.java.  Gimbal is visually represented and can be enabled by setting at least one of the control channels to > -1 (see DEFAULT_CAM_PITCH_CHAN and DEFAULT_CAM_ROLL_CHAN in Simulator.java).
 
 Sensors data can be replayed from real flight log, use `LogPlayerSensors` calss for this.
 
