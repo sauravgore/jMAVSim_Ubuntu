@@ -22,6 +22,24 @@ git clone https://github.com/mpaperno/jMAVSim.git
 git submodule update --init
 ```
 
+Create a standalone runnable JAR file with all libraries included, copy supporting resources, and use a shorter command to execute:
+
+```
+ant create_run_jar copy_res
+cd out/production
+java -jar jmavsim_run.jar [any jMAVSim options]
+```
+
+To create a complete package ready for distribution, build the `distro` target (this will create `out/production/jMAVSim-distrib.zip`):
+
+```
+ant distro
+```
+
+To delete everything in the build folder `ant clean-all`.
+
+#### Alternate build / run / distribute
+
 Compile:
 ```
 ant
@@ -41,24 +59,6 @@ On **Windows** use `;` instead of `:` in -cp:
 ```
 java -cp lib/*;out/production/jmavsim.jar me.drton.jmavsim.Simulator
 ```
-
-#### Alternate build / run / distribute
-
-Create a standalone runnable JAR file with all libraries included, copy supporting resources, and use a shorter command to execute:
-
-```
-ant create-run-jar copy_res
-cd out/production
-java -jar jmavsim_run.jar [any jMAVSim options]
-```
-
-To create a complete package ready for distribution, build the `distro` target (this will create `out/production/jMAVSim-distrib.zip`):
-
-```
-ant distro
-```
-
-To delete everything in the build folder `ant clean-all`.
 
 
 ### Troubleshooting ###
