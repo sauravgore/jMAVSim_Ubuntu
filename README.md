@@ -27,8 +27,13 @@ Create a standalone runnable JAR file with all libraries included, copy supporti
 ```
 ant create_run_jar copy_res
 cd out/production
-java -Djava.ext.dirs= -jar jmavsim_run.jar [any jMAVSim options]
+java -jar jmavsim_run.jar [any jMAVSim options]
 ```
+
+On **Mac OS X** use `-Djava.ext.dirs=` switch when starting to avoid potential problems (see [Troubleshooting](#troubleshooting)), like this:
+
+`java -Djava.ext.dirs= -jar jmavsim_run.jar [any jMAVSim options]`
+
 
 To create a complete package ready for distribution, build the `distro` target (this will create `out/production/jMAVSim-distrib.zip`):
 
@@ -38,27 +43,27 @@ ant distro
 
 To delete everything in the build folder `ant clean-all`.
 
-#### Alternate build / run / distribute
+#### Alternate build/run method
 
 Compile:
-```
-ant
-```
+
+`ant`
 
 Run:
-```
-java -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator
-```
+
+`java -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator`
 
 Some shells (e.g. tcsh) will try to expand `*`, so use `\*` instead:
-```
-java -cp lib/\*:out/production/jmavsim.jar me.drton.jmavsim.Simulator
-```
+
+`java -cp lib/\*:out/production/jmavsim.jar me.drton.jmavsim.Simulator`
+
+On **Mac OS X** use `-Djava.ext.dirs=` switch:
+
+`java -Djava.ext.dirs= -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator`
 
 On **Windows** use `;` instead of `:` in -cp:
-```
-java -cp lib/*;out/production/jmavsim.jar me.drton.jmavsim.Simulator
-```
+
+`java -cp lib/*;out/production/jmavsim.jar me.drton.jmavsim.Simulator`
 
 
 ### Troubleshooting ###
