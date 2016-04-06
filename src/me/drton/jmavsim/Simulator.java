@@ -49,7 +49,7 @@ public class Simulator implements Runnable {
     public static final int    DEFAULT_AUTOPILOT_PORT = 14560;
     public static final int    DEFAULT_QGC_BIND_PORT = 0;
     public static final int    DEFAULT_QGC_PEER_PORT = 14550;
-    public static final String DEFAULT_SERIAL_PATH = "/dev/tty.usbmodem1";
+    public static final String DEFAULT_SERIAL_PATH = "/dev/ttyACM0";
     public static final int    DEFAULT_SERIAL_BAUD_RATE = 230400;
     public static final String LOCAL_HOST = "127.0.0.1";
     public static final String DEFAULT_VEHICLE_MODEL = "models/3dr_arducopter_quad_x.obj";
