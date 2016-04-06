@@ -90,7 +90,7 @@ java -Djava.ext.dirs= -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simu
 
 Serial port access is common problem. Make sure to hardcode correct port in Simulator.java:
 ```
-serialMAVLinkPort.open("/dev/tty.usbmodem1", 230400, 8, 1, 0);
+serialMAVLinkPort.open("/dev/ttyACM0", 230400, 8, 1, 0);
 ```
 (Baudrate for USB ACM ports (that PX4 uses) has no effect, you can use any value)
 
