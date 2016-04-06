@@ -5,7 +5,7 @@ Simple multirotor simulator with MAVLink protocol support
 
 Some Quick Steps:
 ```
-git clone https://github.com/PX4/jMAVSim.git
+git clone https://github.com/whyscience/jMAVSim_Ubuntu.git
 cd  ~/jMAVSim_Ubuntu
 git submodule init
 git submodule update
