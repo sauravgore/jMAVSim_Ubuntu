@@ -3,6 +3,23 @@
 
 Simple multirotor simulator with MAVLink protocol support
 
+Some Quick Steps:
+```
+git clone https://github.com/PX4/jMAVSim.git
+git submodule init
+git submodule update
+
+ant create_run_jar copy_res
+cd out/production
+java -Djava.ext.dirs= -jar jmavsim_run.jar
+
+java -jar jmavsim_run.jar -serial /dev/ttyACM0 230400
+
+```
+
+
+
+
 ### Installation ###
 
 Requirements:
