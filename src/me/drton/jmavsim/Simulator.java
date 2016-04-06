@@ -60,6 +60,7 @@ public class Simulator implements Runnable {
     // Seattle downtown: 47.592182, -122.316031, 86m
     // Moscow downtown: 55.753395, 37.625427, 155m
     // Trumansburg: 42.5339037, -76.6452384, 287m
+    // Shanghai: 31.0256871, 121.4464974, 12m
     public static LatLonAlt DEFAULT_ORIGIN_POS = new LatLonAlt(47.397742, 8.545594, 488);
 
     // Mag inclination and declination in degrees. If both are left as zero, then DEFAULT_MAG_FIELD is used.

@@ -29,7 +29,7 @@ public class MavlinkTest {
             }
         };
         connection.addNode(node);
-        port.setup("/dev/tty.usbmodem1", 57600, 8, 1, 0);
+        port.setup("/dev/ttyACM0", 57600, 8, 1, 0);
         port.open();
         port.sendRaw("\nsh /etc/init.d/rc.usb\n".getBytes());
         while (true) {
