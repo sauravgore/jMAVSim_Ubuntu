@@ -165,6 +165,9 @@ public class Simulator implements Runnable {
             //Serial port: connection to autopilot over serial.
             SerialMAVLinkPort port = new SerialMAVLinkPort(schema);
             port.setup(serialPath, serialBaudRate, 8, 1, 0);
+//            port.setup("/dev/ttyACM0", 230400, 8, 1, 0);
+//            serialMAVLinkPort.open("/dev/ttyACM0", 230400, 8, 1, 0);
+
             autopilotMavLinkPort = port;
         } else {
             UDPMavLinkPort port = new UDPMavLinkPort(schema);
