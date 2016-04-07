@@ -41,7 +41,7 @@ public class Visualizer3D extends JFrame {
     public static final String    COMPASS_IMG = "compass_rose.png";  // for overlay HUD
     public static final Dimension WINDOW_SIZE = new Dimension(1024, 768);  // default application window size
     public static final float     WORLD_SIZE = 50000.0f;  // [m] size of world sphere
-    public static final boolean   AA_ENABLED = true;  // default antialising for 3D scene
+    public static final boolean   AA_ENABLED = true;  // default antialiasing for 3D scene
     public static final ViewTypes VIEW_TYPE  = ViewTypes.VIEW_STATIC;  // default view type
     public static final ZoomModes ZOOM_MODE  = ZoomModes.ZOOM_DYNAMIC;  // default zoom type
     public static final int       FPS_TARGET = 60;  // target frames per second
@@ -68,7 +68,7 @@ public class Visualizer3D extends JFrame {
     private Transform3D viewerTransform = new Transform3D();
     private SimpleUniverse universe;
     private View view;
-    private Canvas3D canvas;
+    private CustomCanvas3D canvas;
     private BoundingSphere sceneBounds;
     private TransformGroup viewerTransformGroup;
     private KinematicObject viewerTargetObject;
@@ -120,10 +120,7 @@ public class Visualizer3D extends JFrame {
 
         // 3D graphics canvas
         GraphicsConfiguration gc = SimpleUniverse.getPreferredConfiguration();
-        if (showOverlay)
-            canvas = new CustomCanvas3D(gc, size, overlaySize);
-        else
-            canvas = new Canvas3D(gc);
+        canvas = new CustomCanvas3D(gc, size, overlaySize);
         canvas.setFocusable(false);
         canvas.addKeyListener(keyHandler);
         canvas.setMinimumSize(new Dimension(250, 250));
@@ -148,6 +145,7 @@ public class Visualizer3D extends JFrame {
         toggleReportPanel(false);
         resetView();
         canvas.requestFocus();
+        
     }
 
     public void addWorldModels() {
@@ -452,8 +450,7 @@ public class Visualizer3D extends JFrame {
      */
     public void setAAEnabled(boolean enable) {
         view.setSceneAntialiasingEnable(enable);
-        if (showOverlay)
-            ((CustomCanvas3D)canvas).setAA(enable);
+        canvas.setAA(enable);
     }
 
     
@@ -725,6 +722,7 @@ public class Visualizer3D extends JFrame {
         private Font msgFont = new Font("SansSerif", Font.PLAIN, 14);
         private Color msgColor = new Color(255, 255, 255, 240);
         private Color msgBgColor = new Color(202, 162, 0, 60);
+        private int msgPanePreferredW = 450;
         
         private BufferedImage compassOverlay;
         private J3DGraphics2D g2d;
@@ -739,13 +737,15 @@ public class Visualizer3D extends JFrame {
         private BasicStroke hdgStroke = new BasicStroke(4.0f);
         private BasicStroke wndStroke = new BasicStroke(5.5f);  // drawn first, on bottom
         private RoundRectangle2D.Float msgBg = new RoundRectangle2D.Float();
-        private int[] overlaySize = new int[2];  // x, y
-        private int[] messagesSize = {450, 600};  // x, y
-        private int msgLineHeight = 15;
+        private int[] hudPaneSize = new int[2];  // w, h
+        private int[] msgPaneSize = new int[2];  // w, max. h
+        private int msgLineHeight;
+        private int hudLineHeight;
         private int halfW;
         private int fps = 1;
         private int framesCount = 0;
         private long frameTime = 0L;
+        private int hudPreferredWidth;
 
         public CustomCanvas3D(GraphicsConfiguration gc, Dimension windowSize, int overlayWidth) 
         {
@@ -754,34 +754,31 @@ public class Visualizer3D extends JFrame {
             
             setAA(AA_ENABLED);
 
-            // constrain overlay sizes
-            if (overlayWidth > windowSize.getWidth() / 2)
-                overlayWidth = (int) (windowSize.getWidth() / 2);
-            if (overlayWidth + 45 > windowSize.getHeight() / 2)
-                overlayWidth = (int) (windowSize.getHeight() / 2);
-            if (messagesSize[0] > windowSize.getWidth() / 2)
-                messagesSize[0] = (int) (windowSize.getWidth() / 2);
-            if (messagesSize[1] > windowSize.getHeight() * 0.75)
-                messagesSize[1] = (int) (windowSize.getHeight() * 0.75);
+            hudPreferredWidth = overlayWidth;
 
-            overlaySize[0] = overlayWidth;
-            overlaySize[1] = overlayWidth + 45;
-            halfW = overlayWidth / 2;
-            frameTime = System.nanoTime();
+            msgLineHeight = (int) (g2d.getFontMetrics(msgFont).getHeight() * 0.8f);
+            hudLineHeight = g2d.getFontMetrics(font).getHeight();
+
+            // set/constrain HUD overlay sizes
+            hudPaneSize[0] = Math.min(hudPreferredWidth, (int) (windowSize.getWidth() / 2));
+            hudPaneSize[1] = Math.min(hudPaneSize[0] + hudLineHeight * 3, (int) (windowSize.getHeight() / 2));
+            halfW = hudPaneSize[0] / 2;
+            
+            setMessagePaneSize(windowSize);
             
             // drawing surface for vector lines
-            drawImg = new BufferedImage(overlayWidth, overlayWidth, BufferedImage.TYPE_4BYTE_ABGR);
+            drawImg = new BufferedImage(hudPreferredWidth, hudPreferredWidth, BufferedImage.TYPE_4BYTE_ABGR);
             drawg2d = drawImg.createGraphics();
 
             // load and scale compass image for overlay
             URL file = null;
-            compassOverlay = new BufferedImage(overlayWidth, overlayWidth, BufferedImage.TYPE_4BYTE_ABGR);
+            compassOverlay = new BufferedImage(hudPreferredWidth, hudPreferredWidth, BufferedImage.TYPE_4BYTE_ABGR);
             
             try {
                 file = new URL("file:./" + TEX_DIR + COMPASS_IMG);
                 if (file != null) {
                     Image img = ImageIO.read(file);
-                    img = img.getScaledInstance(overlayWidth, overlayWidth, Image.SCALE_SMOOTH);
+                    img = img.getScaledInstance(hudPreferredWidth, hudPreferredWidth, Image.SCALE_SMOOTH);
                     compassOverlay.createGraphics().drawImage(img,  0,  0, null);
                 }
             } catch (IOException e) {
@@ -793,7 +790,23 @@ public class Visualizer3D extends JFrame {
             hdgLine = new Line2D.Float(0, 0, 0, halfW * -0.85f);
             crsLine = new Line2D.Float(0, 0, 0, halfW * -0.425f);
             windLine = new Line2D.Float(0, 0, 0, halfW * -0.425f);
-       
+
+            // init FPS timer
+            frameTime = System.nanoTime();
+            
+            // listen for resize events
+            addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    canvas.setMessagePaneSize(e.getComponent().getSize());
+                }
+            });
+        }
+        
+        public void setMessagePaneSize(Dimension windowSize) 
+        {
+            msgPaneSize[0] = Math.min(msgPanePreferredW, (int)windowSize.getWidth()- hudPreferredWidth - overlayMargins[0] * 2 - 10);
+            msgPaneSize[1] = (int) (windowSize.getHeight() * 0.8);
         }
         
         public void setAA(boolean on) 
@@ -818,7 +831,7 @@ public class Visualizer3D extends JFrame {
                 return;
 
             int x = overlayMargins[0];
-            int y = this.getHeight() - overlaySize[1] - overlayMargins[1];
+            int y = this.getHeight() - hudPaneSize[1] - overlayMargins[1];
             double z, dZ, norm;
             Vector3d vect;
 
@@ -882,7 +895,7 @@ public class Visualizer3D extends JFrame {
                 zmode += String.format(" @ %.2fm", dynZoomDistance);
             zmode += String.format("    FOV: %.2f\u00b0", Math.toDegrees(view.getFieldOfView()));
             g2d.drawString("Zoom mode: " + zmode, x, y);
-            y += 20;
+            y += hudLineHeight;
             g2d.drawString(String.format("FPS: %3d", fps), x, y);
             x += 70;
             g2d.setColor(hdgColor);
@@ -896,10 +909,10 @@ public class Visualizer3D extends JFrame {
 
             // messages on the bottom right
             if (msgOutputStream.getListLen() > 0) {
-                x = this.getWidth() - messagesSize[0] - overlayMargins[0];
-                int h = Math.min(messagesSize[1], msgOutputStream.getListLen() * msgLineHeight + 5);
+                x = this.getWidth() - msgPaneSize[0] - overlayMargins[0];
+                int h = Math.min(msgPaneSize[1], msgOutputStream.getListLen() * msgLineHeight + 5);
                 y = this.getHeight() - h - overlayMargins[1];
-                msgBg.setRoundRect(x, y, messagesSize[0], h, 15, 15);
+                msgBg.setRoundRect(x, y, msgPaneSize[0], h, 15, 15);
     
                 g2d.setColor(msgBgColor);
                 g2d.draw(msgBg);
@@ -932,7 +945,7 @@ public class Visualizer3D extends JFrame {
             affTrans.setToIdentity();
             drawg2d.setTransform(affTrans);
             drawg2d.setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f));
-            drawg2d.fillRect(0, 0, overlaySize[0], overlaySize[0]);
+            drawg2d.fillRect(0, 0, hudPaneSize[0], hudPaneSize[0]);
             drawg2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             drawg2d.setColor(Color.BLACK);
             
