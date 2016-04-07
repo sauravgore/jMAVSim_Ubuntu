@@ -597,6 +597,7 @@ public class Visualizer3D extends JFrame {
                             view.setFieldOfView(currentFOV);
                     }
                 }
+                viewerTransform.normalize();
                 viewerTransformGroup.setTransform(viewerTransform);
             } 
             catch (BadTransformException e) {
@@ -714,7 +715,7 @@ public class Visualizer3D extends JFrame {
         
         private int[] overlayMargins = {10, 10};  // x, y from left/right bottom corner
         private Font font = new Font("SansSerif", Font.BOLD, 14);
-        private Color txtColor = Color.white;
+        private Color txtColor = new Color(255, 255, 255, 220);
         private Color hdgColor = Color.magenta;
         private Color crsColor = Color.green;
         private Color windColor = Color.blue;
@@ -737,6 +738,8 @@ public class Visualizer3D extends JFrame {
         private BasicStroke hdgStroke = new BasicStroke(4.0f);
         private BasicStroke wndStroke = new BasicStroke(5.5f);  // drawn first, on bottom
         private RoundRectangle2D.Float msgBg = new RoundRectangle2D.Float();
+        private FontMetrics hudFM;
+        private String tmpStr;
         private int[] hudPaneSize = new int[2];  // w, h
         private int[] msgPaneSize = new int[2];  // w, max. h
         private int msgLineHeight;
@@ -755,13 +758,14 @@ public class Visualizer3D extends JFrame {
             setAA(AA_ENABLED);
 
             hudPreferredWidth = overlayWidth;
+            hudFM = g2d.getFontMetrics(font);
 
             msgLineHeight = (int) (g2d.getFontMetrics(msgFont).getHeight() * 0.8f);
-            hudLineHeight = g2d.getFontMetrics(font).getHeight();
+            hudLineHeight = hudFM.getHeight();
 
             // set/constrain HUD overlay sizes
             hudPaneSize[0] = Math.min(hudPreferredWidth, (int) (windowSize.getWidth() / 2));
-            hudPaneSize[1] = Math.min(hudPaneSize[0] + hudLineHeight * 3, (int) (windowSize.getHeight() / 2));
+            hudPaneSize[1] = Math.min(hudPaneSize[0] + hudLineHeight * 2, (int) (windowSize.getHeight() / 2));
             halfW = hudPaneSize[0] / 2;
             
             setMessagePaneSize(windowSize);
@@ -832,7 +836,8 @@ public class Visualizer3D extends JFrame {
 
             int x = overlayMargins[0];
             int y = this.getHeight() - hudPaneSize[1] - overlayMargins[1];
-            double z, dZ, norm;
+            int h, w;
+            double z, dZ, norm, vel = 0d;
             Vector3d vect;
 
             clearDrawing();
@@ -871,11 +876,11 @@ public class Visualizer3D extends JFrame {
                 // course over ground line
                 vect = vehicleViewObject.getVelocity();
                 z = Math.atan2(vect.y, vect.x);
-                norm = Math.sqrt(vect.x * vect.x + vect.y * vect.y);
+                vel = Math.sqrt(vect.x * vect.x + vect.y * vect.y);
                 affTrans.setToTranslation(halfW, halfW);
                 affTrans.rotate(z + dZ);
                 // scale length and width based on vehicle speed
-                affTrans.scale(Math.max(Math.min(Math.abs(vect.z) * 0.5, 10.0), 1.0), Math.min(norm * 0.2, halfW * 0.85));
+                affTrans.scale(Math.max(Math.min(Math.abs(vect.z) * 0.5, 10.0), 1.0), Math.min(vel * 0.2, halfW * 0.85));
                 drawg2d.setTransform(affTrans);
                 drawg2d.setColor(crsColor);
                 drawg2d.setStroke(crsStroke);
@@ -889,28 +894,55 @@ public class Visualizer3D extends JFrame {
             
             g2d.setFont(font);
             g2d.setColor(txtColor);
-            y += drawImg.getHeight() + 25;
-            String zmode = zoomMode == ZoomModes.ZOOM_NONE ? "Fixed" : zoomMode == ZoomModes.ZOOM_DYNAMIC ? "Dynamic" : "Manual";
+            if (vehicleViewObject != null) {
+                g2d.drawString("ALT", x, y);
+                g2d.drawString(String.format("%05.2fm", -vehicleViewObject.getPosition().z), x, y + hudLineHeight);
+                
+                tmpStr = "V-VEL";
+                g2d.drawString(tmpStr, x + hudPaneSize[0] - hudFM.stringWidth(tmpStr), y);
+                tmpStr = String.format("%05.2fm/s", -vect.z);
+                g2d.drawString(tmpStr, x + hudPaneSize[0] - hudFM.stringWidth(tmpStr), y + hudLineHeight);
+
+                g2d.drawString("DST", x, y + drawImg.getHeight() - hudLineHeight);
+                norm = Math.sqrt(vehicleViewObject.getPosition().x * vehicleViewObject.getPosition().x + vehicleViewObject.getPosition().y * vehicleViewObject.getPosition().y);
+                g2d.drawString(String.format("%05.2fm", norm), x, y + drawImg.getHeight());
+
+                tmpStr = "H-VEL";
+                g2d.drawString(tmpStr, x + hudPaneSize[0] - hudFM.stringWidth(tmpStr), y + drawImg.getHeight() - hudLineHeight);
+                tmpStr = String.format("%05.2fm/s", vel);
+                g2d.drawString(tmpStr, x + hudPaneSize[0] - hudFM.stringWidth(tmpStr), y + drawImg.getHeight());
+            }
+            y += drawImg.getHeight() + hudLineHeight;
+            tmpStr = zoomMode == ZoomModes.ZOOM_NONE ? "Fixed" : zoomMode == ZoomModes.ZOOM_DYNAMIC ? "Dynamic" : "Manual";
             if (zoomMode == ZoomModes.ZOOM_DYNAMIC)
-                zmode += String.format(" @ %.2fm", dynZoomDistance);
-            zmode += String.format("    FOV: %.2f\u00b0", Math.toDegrees(view.getFieldOfView()));
-            g2d.drawString("Zoom mode: " + zmode, x, y);
+                tmpStr += String.format(" @ %.2fm", dynZoomDistance);
+            tmpStr += String.format("    FOV: %.2f\u00b0", Math.toDegrees(view.getFieldOfView()));
+            g2d.drawString("Zoom mode: " + tmpStr, x, y);
+            
+            // FPS counter
             y += hudLineHeight;
-            g2d.drawString(String.format("FPS: %3d", fps), x, y);
-            x += 70;
+            tmpStr = String.format("FPS: %3d", fps);
+            g2d.drawString(tmpStr, x, y);
+            w = hudFM.stringWidth(tmpStr);
+            x += w + w * 0.5;
+            
+            // color legend
             g2d.setColor(hdgColor);
+            tmpStr = "HDG";
             g2d.drawString("HDG", x, y);
-            x += 40;
+            w = hudFM.stringWidth(tmpStr);
+            w += w * 0.5;
+            x += w;
             g2d.setColor(crsColor);
             g2d.drawString("CRS", x, y);
-            x += 40;
+            x += w;
             g2d.setColor(windColor);
             g2d.drawString("WND", x, y);
 
             // messages on the bottom right
             if (msgOutputStream.getListLen() > 0) {
                 x = this.getWidth() - msgPaneSize[0] - overlayMargins[0];
-                int h = Math.min(msgPaneSize[1], msgOutputStream.getListLen() * msgLineHeight + 5);
+                h = Math.min(msgPaneSize[1], msgOutputStream.getListLen() * msgLineHeight + 5);
                 y = this.getHeight() - h - overlayMargins[1];
                 msgBg.setRoundRect(x, y, msgPaneSize[0], h, 15, 15);
     
@@ -947,8 +979,6 @@ public class Visualizer3D extends JFrame {
             drawg2d.setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f));
             drawg2d.fillRect(0, 0, hudPaneSize[0], hudPaneSize[0]);
             drawg2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-            drawg2d.setColor(Color.BLACK);
-            
         }
     }
     
