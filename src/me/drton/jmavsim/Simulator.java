@@ -33,7 +33,7 @@ import java.util.concurrent.ScheduledFuture;;
 public class Simulator implements Runnable {
 
     public static boolean   USE_SERIAL_PORT       = false;  // use serial port for MAV instead of UDP 
-    public static boolean   COMMUNICATE_WITH_QGC  = true;   // open UDP port to QGC
+    public static boolean   COMMUNICATE_WITH_QGC  = false;   // open UDP port to QGC
     public static boolean   DO_MAG_FIELD_LOOKUP   = false;  // perform online mag incl/decl lookup for current position
     public static boolean   USE_GIMBAL            = true;   // enable gimbal modeling (optionally also define remote pitch/roll controls below)
     public static boolean   GUI_SHOW_REPORT_PANEL = false;  // start with report panel showing
@@ -98,13 +98,11 @@ public class Simulator implements Runnable {
     private static boolean monitorMessage = false;
 
     private Visualizer3D visualizer;
-    private AbstractMulticopter vehicle;
-    private CameraGimbal2D gimbal;
-    private MAVLinkHILSystem hilSystem;
-    private MAVLinkPort autopilotMavLinkPort;
-    private UDPMavLinkPort udpGCMavLinkPort;
-    private ScheduledFuture<?> thisHandle;
     private World world;
+    private MAVLinkHILSystem hilSystem = null;
+    private MAVLinkPort autopilotMavLinkPort = null;
+    private UDPMavLinkPort udpGCMavLinkPort = null;
+    private ScheduledFuture<?> thisHandle = null;
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private SystemOutHandler outputHandler;
 //  private int simDelayMax = 500;  // Max delay between simulated and real time to skip samples in simulator, in ms
@@ -150,15 +148,7 @@ public class Simulator implements Runnable {
         // Create MAVLink connections
         MAVLinkConnection connHIL = new MAVLinkConnection(world);
         world.addObject(connHIL);
-        MAVLinkConnection connCommon = new MAVLinkConnection(world);
-        // Don't spam ground station with HIL messages
-        if (schema != null) {
-            connCommon.addSkipMessage(schema.getMessageDefinition("HIL_CONTROLS").id);
-            connCommon.addSkipMessage(schema.getMessageDefinition("HIL_SENSOR").id);
-            connCommon.addSkipMessage(schema.getMessageDefinition("HIL_GPS").id);
-        }
-        world.addObject(connCommon);
-
+        
         // Create ports
         if (USE_SERIAL_PORT) {
             //Serial port: connection to autopilot over serial.
@@ -174,21 +164,8 @@ public class Simulator implements Runnable {
                 port.setMonitorMessageID(monitorMessageIds);
             autopilotMavLinkPort = port;
         }
-
-        // allow HIL and GCS to talk to this port
         connHIL.addNode(autopilotMavLinkPort);
-        connCommon.addNode(autopilotMavLinkPort);
-        // UDP port: connection to ground station
-        udpGCMavLinkPort = new UDPMavLinkPort(schema);
-        //udpGCMavLinkPort.setDebug(true);
-        if (COMMUNICATE_WITH_QGC) {
-            udpGCMavLinkPort.setup(qgcBindPort, qgcIpAddress, qgcPeerPort);
-            //udpGCMavLinkPort.setDebug(true);
-            if (monitorMessage && USE_SERIAL_PORT)
-                udpGCMavLinkPort.setMonitorMessageID(monitorMessageIds);
-            connCommon.addNode(udpGCMavLinkPort);
-        }
-
+        
         // Set up magnetic field deviations 
         // (do this after environment already has a reference point in case we need to look up declination manually)
         if (DO_MAG_FIELD_LOOKUP)
@@ -208,21 +185,22 @@ public class Simulator implements Runnable {
         }
 
         // Create vehicle with sensors
+        AbstractMulticopter vehicle;
         if (autopilotType == "aq")
             vehicle = buildAQ_leora();
         else
             vehicle = buildMulticopter();
+        world.addObject(vehicle);
 
         // Create MAVLink HIL system
         // SysId should be the same as autopilot, ComponentId should be different!
         hilSystem = new MAVLinkHILSystem(schema, autopilotSysId, 51, vehicle);
         //hilSystem.setHeartbeatInterval(0);
         connHIL.addNode(hilSystem);
-        world.addObject(vehicle);
 
         // Put camera on vehicle with gimbal
         if (USE_GIMBAL) {
-            gimbal = buildGimbal();
+            CameraGimbal2D gimbal = buildGimbal(vehicle);
             world.addObject(gimbal);
             visualizer.setGimbalViewObject(gimbal);
         }
@@ -249,6 +227,26 @@ public class Simulator implements Runnable {
         }
 
         if (COMMUNICATE_WITH_QGC) {
+            
+            // allow HIL and GCS to talk to this port
+            MAVLinkConnection connCommon = new MAVLinkConnection(world);
+            // Don't spam ground station with HIL messages
+            if (schema != null) {
+                connCommon.addSkipMessage(schema.getMessageDefinition("HIL_CONTROLS").id);
+                connCommon.addSkipMessage(schema.getMessageDefinition("HIL_SENSOR").id);
+                connCommon.addSkipMessage(schema.getMessageDefinition("HIL_GPS").id);
+            }
+            connCommon.addNode(autopilotMavLinkPort);
+
+            // UDP port: connection to ground station
+            udpGCMavLinkPort = new UDPMavLinkPort(schema);
+            udpGCMavLinkPort.setup(qgcBindPort, qgcIpAddress, qgcPeerPort);
+            //udpGCMavLinkPort.setDebug(true);
+            if (monitorMessage && USE_SERIAL_PORT)
+                udpGCMavLinkPort.setMonitorMessageID(monitorMessageIds);
+            connCommon.addNode(udpGCMavLinkPort);
+            
+            world.addObject(connCommon);
             try {
                 udpGCMavLinkPort.open();
             }
@@ -305,7 +303,7 @@ public class Simulator implements Runnable {
         I.m11 = 0.005;  // Y
         I.m22 = 0.009;  // Z
         vehicle.setMomentOfInertia(I);
-        vehicle.setMass(0.8);
+        vehicle.setMass(0.8f);
         vehicle.setDragMove(0.01);
         SimpleSensors sensors = new SimpleSensors();
         sensors.setGPSInterval(50);
@@ -333,7 +331,7 @@ public class Simulator implements Runnable {
         I.m22 = 0.002;   // Z
         
         vehicle.setMomentOfInertia(I);
-        vehicle.setMass(0.25);
+        vehicle.setMass(0.25f);
         vehicle.setDragMove(0.01);
         //v.setDragRotate(0.1);
         
@@ -352,9 +350,10 @@ public class Simulator implements Runnable {
         return vehicle;
     }
 
-    private CameraGimbal2D buildGimbal() {
+    private CameraGimbal2D buildGimbal(DynamicObject baseObj) {
         CameraGimbal2D g = new CameraGimbal2D(world, DEFAULT_GIMBAL_MODEL);
-        g.setBaseObject(vehicle);
+        if (baseObj != null)
+            g.setBaseObject(baseObj);
         g.setPitchChannel(DEFAULT_CAM_PITCH_CHAN);
         g.setPitchScale(DEFAULT_CAM_PITCH_SCAL); 
         g.setRollChannel(DEFAULT_CAM_ROLL_CHAN);
