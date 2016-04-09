@@ -547,8 +547,8 @@ public class Visualizer3D extends JFrame {
     }
     
     private void updateVisualizer() {
-        double dist;
-        synchronized (world) { // Synchronize with "world" thread
+        float dist;
+//        synchronized (world) { // Synchronize with "world" thread
             try {
                 // Update branch groups of all kinematic objects
                 for (WorldObject object : world.getObjects()) {
@@ -577,7 +577,7 @@ public class Visualizer3D extends JFrame {
                 else if (viewerTargetObject != null) {
                     // Fixed-position camera, point camera to target
                     tmp_v3d = viewerTargetObject.getPosition();
-                    dist = getVectorToTargetObject(viewerPosition, viewerTargetObject).length();
+                    dist = (float)getVectorToTargetObject(viewerPosition, viewerTargetObject).length();
     
                     tmp_m3d1.rotZ(Math.PI);
                     tmp_m3d2.rotY(PI_2);
@@ -603,7 +603,7 @@ public class Visualizer3D extends JFrame {
             catch (BadTransformException e) {
                 e.printStackTrace();
             }
-        }
+//        }
     }
 
     /*
@@ -635,6 +635,7 @@ public class Visualizer3D extends JFrame {
             r.set(aa);
         }
         rot.mulNormalize(r);
+        obj.setRotation(rot);
     }
 
     /*
@@ -649,7 +650,9 @@ public class Visualizer3D extends JFrame {
             // if still on ground, move it up so it can rotate
             if (obj.getPosition().z >= 0)
                 moveObject(obj, new Vector3f(0f, 0f, -2.0f), false);
-            obj.getRotationRate().add(new Vector3d(vec));
+            Vector3d v = new Vector3d(vec);
+            v.add(obj.getRotationRate());
+            obj.setRotationRate(v);
         }
     }
 
@@ -664,6 +667,7 @@ public class Visualizer3D extends JFrame {
             pos.set(vec);
         else
             pos.add(new Vector3d(vec));
+        obj.setPosition(pos);
         obj.setIgnoreGravity(pos.z < 0.0);
 //        if (pos.z >= 0.0)
 //            //world.getEnvironment().setG(null);

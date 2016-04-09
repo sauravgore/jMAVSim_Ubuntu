@@ -19,7 +19,7 @@ import java.util.List;
  * 'update()' method of AbstractVehicle must be called from child class implementation if overridden.
  */
 public abstract class AbstractVehicle extends DynamicObject implements ReportingObject {
-    protected List<Double> control = Collections.emptyList();
+    protected volatile List<Double> control = Collections.emptyList();
     protected Sensors sensors = null;
 
     public AbstractVehicle(World world, String modelName) {
