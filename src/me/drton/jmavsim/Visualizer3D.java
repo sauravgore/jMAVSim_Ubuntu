@@ -104,7 +104,7 @@ public class Visualizer3D extends JFrame {
         
         setSize(size);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setTitle("jMAVSim");
+        setTitle("jMAVSim v" + Version.VERSION_STR);
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setOneTouchExpandable(false);

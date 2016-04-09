@@ -195,8 +195,13 @@ public class Simulator implements Runnable {
         // Create MAVLink HIL system
         // SysId should be the same as autopilot, ComponentId should be different!
         hilSystem = new MAVLinkHILSystem(schema, autopilotSysId, 51, vehicle);
-        //hilSystem.setHeartbeatInterval(0);
         connHIL.addNode(hilSystem);
+        
+        if (autopilotType == "aq") {
+            hilSystem.setHeartbeatInterval(0);
+            DEFAULT_CAM_ROLL_CHAN = 6;
+            DEFAULT_CAM_PITCH_CHAN = 7;
+        }
 
         // Put camera on vehicle with gimbal
         if (USE_GIMBAL) {
@@ -440,7 +445,7 @@ public class Simulator implements Runnable {
     public final static String SPEED_STRING = "-r <Hz>";
     public final static String CMD_STRING = "java [-Xmx512m] -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator";
     public final static String CMD_STRING_JAR = "java [-Xmx512m] -jar jmavsim_run.jar";
-    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] [" + AP_STRING + "] [" + MAG_STRING + "] " + 
+    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h | -v] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] [" + AP_STRING + "] [" + MAG_STRING + "] " + 
                                               "[" + QGC_STRING + "] [" + GIMBAL_STRING + "] [" + GUI_AA_STRING + "] [" + GUI_MAX_STRING + "] [" + GUI_VIEW_STRING + "] [" + REP_STRING + "] [" + PRINT_INDICATION_STRING + "]";
 
     public static void main(String[] args)
@@ -451,6 +456,10 @@ public class Simulator implements Runnable {
             String arg = args[i++];
             if (arg.equalsIgnoreCase("-h") || arg.equalsIgnoreCase("--help")) {
                 handleHelpFlag();
+                return;
+            }
+            if (arg.equalsIgnoreCase("-v") || arg.equalsIgnoreCase("-version")) {
+                showVersion();
                 return;
             }
             if (arg.equalsIgnoreCase("-m")) {
@@ -638,9 +647,15 @@ public class Simulator implements Runnable {
         SwingUtilities.invokeLater(new Simulator());
     }
 
+    public static void showVersion() {
+        System.out.println("");
+        System.out.println("jMAVSim version: " + Version.VERSION_STR);
+    }
+    
     public static void handleHelpFlag() {
         String viewType = (GUI_START_VIEW == ViewTypes.VIEW_FPV ? "fpv" : GUI_START_VIEW == ViewTypes.VIEW_GIMBAL ? "gmbl" : "grnd");
-        
+
+        showVersion();
         System.out.println("\nUsage: " + USAGE_STRING + "\n");
         System.out.println("Command-line options:\n");
         System.out.println(UDP_STRING);
