@@ -37,11 +37,11 @@ On **Mac OS X** use `-Djava.ext.dirs=` switch when starting to avoid potential p
 
 To create a complete package ready for distribution, build the `distro` target (this will create `out/production/jMAVSim-distrib.zip`):
 
-```
-ant distro
-```
+`ant distro`
 
-To delete everything in the build folder `ant clean-all`.
+To delete everything in the build folder 
+
+`ant clean-all`.
 
 #### Alternate build/run method
 

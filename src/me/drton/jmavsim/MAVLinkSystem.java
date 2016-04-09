@@ -31,10 +31,10 @@ public class MAVLinkSystem extends MAVLinkNode {
     @Override
     public void update(long t) {
         if (heartbeatNext <= t && heartbeatInterval > 0) {
+            heartbeatNext = t + heartbeatInterval;
             MAVLinkMessage msg = new MAVLinkMessage(schema, "HEARTBEAT", sysId, componentId);
             msg.set("mavlink_version", 3);
             sendMessage(msg);
-            heartbeatNext = t + heartbeatInterval;
         }
     }
 }
