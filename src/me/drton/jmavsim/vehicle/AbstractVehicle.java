@@ -104,7 +104,7 @@ public abstract class AbstractVehicle extends DynamicObject implements Reporting
     }
 
     public List<Double> getControl() {
-        return control;
+        return new ArrayList<Double>(control);
     }
 
     /**

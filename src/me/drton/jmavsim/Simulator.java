@@ -43,7 +43,8 @@ public class Simulator implements Runnable {
     public static ZoomModes GUI_START_ZOOM        = ZoomModes.ZOOM_DYNAMIC;
     public static boolean   LOG_TO_STDOUT         = true;   // send System.out messages to stdout (console) as well as any custom handlers (see SystemOutHandler)
     
-    public static final int    DEFAULT_SIM_SPEED = 500; // Hz
+    public static final int    DEFAULT_SIM_SPEED = 400; // Hz
+    public static final int    DEFAULT_SENSOR_MSG_FREQ = 400; // Hz
     public static final int    DEFAULT_AUTOPILOT_SYSID = -1; // System ID of autopilot to communicate with. -1 to auto set ID on first received heartbeat.
     public static final String DEFAULT_AUTOPILOT_TYPE = "generic";  // eg. "px4" or "aq"
     public static final int    DEFAULT_AUTOPILOT_PORT = 14560;
@@ -84,6 +85,7 @@ public class Simulator implements Runnable {
 
     
     private static int sleepInterval = (int)1e6 / DEFAULT_SIM_SPEED;  // Main loop interval, in us
+    private static int sensorMsgFreq = DEFAULT_SENSOR_MSG_FREQ;  // HIL_SENSORS message loop interval, in Hz
     private static int autopilotSysId = DEFAULT_AUTOPILOT_SYSID;
     private static String autopilotType = DEFAULT_AUTOPILOT_TYPE;
     private static String autopilotIpAddress = LOCAL_HOST;
@@ -195,6 +197,7 @@ public class Simulator implements Runnable {
         // Create MAVLink HIL system
         // SysId should be the same as autopilot, ComponentId should be different!
         hilSystem = new MAVLinkHILSystem(schema, autopilotSysId, 51, vehicle);
+        hilSystem.setSensorMsgFreq(sensorMsgFreq);
         connHIL.addNode(hilSystem);
         
         if (autopilotType == "aq") {
@@ -213,7 +216,9 @@ public class Simulator implements Runnable {
         // Create simulation report updater
         world.addObject(new ReportUpdater(world, visualizer));
 
+        // tell visualizer that all 3D scene branch groups are ready to load
         visualizer.addWorldModels();
+        // also give it pointers to some objects we've already added
         visualizer.setHilSystem(hilSystem);
         visualizer.setVehicleViewObject(vehicle);
         
@@ -443,9 +448,10 @@ public class Simulator implements Runnable {
     public final static String GUI_VIEW_STRING = "-view (fpv|grnd|gmbl)";
     public final static String AP_STRING = "-ap <autopilot_type>";
     public final static String SPEED_STRING = "-r <Hz>";
-    public final static String CMD_STRING = "java [-Xmx512m] -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator";
-    public final static String CMD_STRING_JAR = "java [-Xmx512m] -jar jmavsim_run.jar";
-    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h | -v] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] [" + AP_STRING + "] [" + MAG_STRING + "] " + 
+    public final static String SENSOR_RATE_STRING = "-rs <Hz>";
+    public final static String CMD_STRING = "java -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator";
+    public final static String CMD_STRING_JAR = "java -jar jmavsim_run.jar";
+    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h | -v] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] [" + SENSOR_RATE_STRING + "] [" + AP_STRING + "] [" + MAG_STRING + "] " + 
                                               "[" + QGC_STRING + "] [" + GIMBAL_STRING + "] [" + GUI_AA_STRING + "] [" + GUI_MAX_STRING + "] [" + GUI_VIEW_STRING + "] [" + REP_STRING + "] [" + PRINT_INDICATION_STRING + "]";
 
     public static void main(String[] args)
@@ -587,18 +593,21 @@ public class Simulator implements Runnable {
                     System.err.println("-ap requires the autopilot name as an argument.");
                     return;
                 }
-            } else if (arg.equals("-r")) {
+            } else if (arg.equals("-r") || arg.equals("-rs")) {
                 if (i < args.length) {
                     int t;
                     try {
                         t = Integer.parseInt(args[i++]);
                     } catch (NumberFormatException e) {
-                        System.err.println("Expected numeric argument after -r: " + SPEED_STRING);
+                        System.err.println("Expected numeric argument after " + arg + ": " + SPEED_STRING);
                         return;
                     }
-                    sleepInterval = (int)1e6 / t;
+                    if (arg.equals("-r"))
+                        sleepInterval = (int)1e6 / t;
+                    else
+                        sensorMsgFreq = t;
                 } else {
-                    System.err.println("-r requires Hz as an argument.");
+                    System.err.println(arg + " requires Hz as an argument.");
                     return;
                 }
             } else if (arg.equals("-view")) {
@@ -664,8 +673,11 @@ public class Simulator implements Runnable {
         System.out.println("      Open a serial connection to the MAV instead of UDP.");
         System.out.println("      Default path/baud is: " + serialPath + " " + serialBaudRate + "");
         System.out.println(SPEED_STRING);
-        System.out.println("      Refresh rate at which jMAVSim runs. This dictates the frequency");
-        System.out.println("      of the HIL_SENSOR messages. Default is " + DEFAULT_SIM_SPEED + " Hz");
+        System.out.println("      Frequency at which jMAVSim updates the 'world' and all the objects in it.");
+        System.out.println("      Default is " + DEFAULT_SIM_SPEED + " Hz");
+        System.out.println(SENSOR_RATE_STRING);
+        System.out.println("      Frequency at which jMAVSim sends the sensor output messages to the MAV.");
+        System.out.println("      Default is " + DEFAULT_SENSOR_MSG_FREQ + " Hz");
         System.out.println(AP_STRING);
         System.out.println("      Specify the MAV type. E.g. 'px4' or 'aq'. Default is: " + autopilotType + "");
         System.out.println(MAG_STRING);
