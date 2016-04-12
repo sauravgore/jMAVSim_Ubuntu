@@ -7,6 +7,7 @@ import me.drton.jmavsim.ReportingObject;
 import me.drton.jmavsim.Sensors;
 import me.drton.jmavsim.World;
 
+import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3d;
 
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.List;
 public abstract class AbstractVehicle extends DynamicObject implements ReportingObject {
     protected volatile List<Double> control = Collections.emptyList();
     protected Sensors sensors = null;
+    protected Quat4f quaternion = new Quat4f();
 
     public AbstractVehicle(World world, String modelName) {
         super(world);
@@ -55,6 +57,14 @@ public abstract class AbstractVehicle extends DynamicObject implements Reporting
         builder.append("Att: ");
         builder.append(ReportUtil.vector2str(ReportUtil.vectRad2Deg(attitude)));
         builder.append(newLine);
+
+        quaternion.set(rotation);
+        quaternion.normalize();
+        builder.append(String.format("Quat: W: %s X: %s", ReportUtil.d2str(quaternion.w), ReportUtil.d2str(quaternion.x)));
+        builder.append(newLine);
+        builder.append(String.format("      Y: %s Z: %s", ReportUtil.d2str(quaternion.y), ReportUtil.d2str(quaternion.z)));
+        builder.append(newLine);
+        
         builder.append(newLine);
         
         if (sensors != null) {
