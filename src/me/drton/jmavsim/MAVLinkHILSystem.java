@@ -138,13 +138,14 @@ public class MAVLinkHILSystem extends MAVLinkSystem {
         Vector3d vect;
         MAVLinkMessage msg_sensor = new MAVLinkMessage(schema, "HIL_SENSOR", sysId, componentId);
         MAVLinkMessage msg_gps = new MAVLinkMessage(schema, "HIL_GPS", sysId, componentId);
+        private long startTime = System.nanoTime();
 
         @Override
         public void run() {
             if (!inited)
                 return;
 
-            long tu = System.currentTimeMillis() * 1000; // Time in us
+            long tu = (System.nanoTime() - this.startTime) / 1000L;   // Time in us
             
             try {
                 Sensors sensors = vehicle.getSensors();
