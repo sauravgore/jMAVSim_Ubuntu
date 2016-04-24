@@ -188,7 +188,7 @@ public class Simulator implements Runnable {
 
         // Create vehicle with sensors
         AbstractMulticopter vehicle;
-        if (autopilotType == "aq")
+        if (autopilotType.equals("aq"))
             vehicle = buildAQ_leora();
         else
             vehicle = buildMulticopter();
@@ -200,7 +200,7 @@ public class Simulator implements Runnable {
         hilSystem.setSensorMsgFreq(sensorMsgFreq);
         connHIL.addNode(hilSystem);
         
-        if (autopilotType == "aq") {
+        if (autopilotType.equals("aq")) {
             hilSystem.setHeartbeatInterval(0);
             DEFAULT_CAM_ROLL_CHAN = 6;
             DEFAULT_CAM_PITCH_CHAN = 7;

@@ -33,7 +33,7 @@ public class Quadcopter extends AbstractMulticopter {
         
         int i;
 
-        if (style == "cw_fr") {
+        if (style.equals("cw_fr")) {
             rotorPositions[0] = new Vector3d(armLength, 0.0, 0.0);
             rotorPositions[1] = new Vector3d(0.0, armLength, 0.0);
             rotorPositions[2] = new Vector3d(-armLength, 0.0, 0.0);
