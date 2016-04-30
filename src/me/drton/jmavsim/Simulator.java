@@ -95,6 +95,7 @@ public class Simulator implements Runnable {
     private static int qgcPeerPort = DEFAULT_QGC_PEER_PORT;
     private static String serialPath = DEFAULT_SERIAL_PATH;
     private static int serialBaudRate = DEFAULT_SERIAL_BAUD_RATE;
+    private static LatLonAlt referencePos = DEFAULT_ORIGIN_POS;
     
     private static HashSet<Integer> monitorMessageIds = new HashSet<Integer>();
     private static boolean monitorMessage = false;
@@ -119,7 +120,6 @@ public class Simulator implements Runnable {
         
         // Create world
         world = new World();
-        LatLonAlt referencePos = DEFAULT_ORIGIN_POS;
         world.setGlobalReference(referencePos);
 
         // Create environment
@@ -449,10 +449,14 @@ public class Simulator implements Runnable {
     public final static String AP_STRING = "-ap <autopilot_type>";
     public final static String SPEED_STRING = "-r <Hz>";
     public final static String SENSOR_RATE_STRING = "-rs <Hz>";
+    public final static String ORIGIN_POS_STRING = "-pos <Lat,Lon,Alt>";
+    public final static String MAG_FLD_STRING = "-mag <Incl,Decl>";
     public final static String CMD_STRING = "java -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator";
     public final static String CMD_STRING_JAR = "java -jar jmavsim_run.jar";
-    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h | -v] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] [" + SENSOR_RATE_STRING + "] [" + AP_STRING + "] [" + MAG_STRING + "] " + 
-                                              "[" + QGC_STRING + "] [" + GIMBAL_STRING + "] [" + GUI_AA_STRING + "] [" + GUI_MAX_STRING + "] [" + GUI_VIEW_STRING + "] [" + REP_STRING + "] [" + PRINT_INDICATION_STRING + "]";
+    public final static String USAGE_STRING = CMD_STRING_JAR + " [-h | -v] [" + UDP_STRING + " | " + SERIAL_STRING + "] [" + SPEED_STRING + "] " +
+                                        "[" + SENSOR_RATE_STRING + "] [" + AP_STRING + "] [" + ORIGIN_POS_STRING + "] [" + MAG_FLD_STRING + "] [" + MAG_STRING + "] " + 
+                                        "[" + QGC_STRING + "] [" + GIMBAL_STRING + "] [" + GUI_AA_STRING + "] [" + GUI_MAX_STRING + "] [" + GUI_VIEW_STRING + "] " +
+                                        "[" + REP_STRING + "] [" + PRINT_INDICATION_STRING + "]";
 
     public static void main(String[] args)
             throws InterruptedException, IOException {
@@ -626,6 +630,46 @@ public class Simulator implements Runnable {
                     System.err.println("-view requires an argument: " + GUI_VIEW_STRING);
                     return;
                 }
+            } else if (arg.equals("-pos")) {
+                if ( i < args.length) {
+                    try {
+                        String[] arglist = args[i++].split(",");
+                        if (arglist.length == 3) {
+                            Double lat = Double.parseDouble(arglist[0]);
+                            Double lon = Double.parseDouble(arglist[1]);
+                            Double alt = Double.parseDouble(arglist[2]);
+                            referencePos = new LatLonAlt(lat, lon, alt);
+                        } else {
+                            System.err.println("-pos needs three variables: Latitude, Longitude, Altitude.");
+                            return;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("Number format error. Expected numeric Lat,Lon,Alt. Error: " + e.toString());
+                        return;
+                    }
+                } else {
+                    System.err.println("-pos needs an argument. Expected: " + ORIGIN_POS_STRING + ", got: " + Arrays.toString(args));
+                    return;
+                }
+            } else if (arg.equals("-mag")) {
+                if ( i < args.length) {
+                    try {
+                        String[] arglist = args[i++].split(",");
+                        if (arglist.length == 2) {
+                            DEFAULT_MAG_INCL = Double.parseDouble(arglist[0]);
+                            DEFAULT_MAG_DECL = Double.parseDouble(arglist[1]);
+                        } else {
+                            System.err.println("-mag needs two numeric variables: Inclination,Declination.");
+                            return;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("Number format error. Expected numeric Inclination,Declination. Error: " + e.toString());
+                        return;
+                    }
+                } else {
+                    System.err.println("-mag needs an argument. Expected: " + MAG_FLD_STRING + ", got: " + Arrays.toString(args));
+                    return;
+                }
             } else if (arg.equals("-automag")) {
                 DO_MAG_FIELD_LOOKUP = true;
             } else if (arg.equals("-rep")) {
@@ -680,6 +724,14 @@ public class Simulator implements Runnable {
         System.out.println("      Default is " + DEFAULT_SENSOR_MSG_FREQ + " Hz");
         System.out.println(AP_STRING);
         System.out.println("      Specify the MAV type. E.g. 'px4' or 'aq'. Default is: " + autopilotType + "");
+        System.out.println(ORIGIN_POS_STRING);
+        System.out.println("      Start at specified Latitude, Longitude, Altitude. Lat/Lon should be");
+        System.out.println("      expressed in decimal degrees, Alt in meters.");
+        System.out.println("      Default is: " + DEFAULT_ORIGIN_POS.lat + "," + DEFAULT_ORIGIN_POS.lon + "," + DEFAULT_ORIGIN_POS.alt);
+        System.out.println(MAG_FLD_STRING);
+        System.out.println("      Use specified magnetic Inclination & Declination. Incl/Decl should ");
+        System.out.println("      be expressed in decimal degrees. Ignored if " + MAG_STRING + " option is used.");
+        System.out.println("      Default is: " + DEFAULT_MAG_INCL + "," + DEFAULT_MAG_DECL);
         System.out.println(MAG_STRING);
         System.out.println("      Attempt automatic magnetic field inclination/declination lookup");
         System.out.println("      for starting global position via NOAA Web service.");
