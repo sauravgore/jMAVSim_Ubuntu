@@ -24,8 +24,8 @@ java -jar jmavsim_run.jar -serial /dev/ttyACM0 230400
 
 To run it
 ```
-cd ~/jMAVSim_Ubuntu
-java -cp lib/*:out/production/jmavsim.jar me.drton.jmavsim.Simulator  -serial /dev/ttyACM0 230400
+cd ~/jMAVSim_Ubuntu/out/production
+java -jar jmavsim_run.jar -serial /dev/ttyACM0 230400
 
 ```
 
