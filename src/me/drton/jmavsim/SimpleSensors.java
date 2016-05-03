@@ -17,17 +17,18 @@ public class SimpleSensors implements Sensors {
     private long gpsStartTime = -1;
     private long gpsInterval = 200;  // [ms]
     private long gpsNext = 0;
-    private GNSSReport gps = new GNSSReport();
+    private volatile GNSSReport gps = new GNSSReport();  // after delay
+    private GNSSReport gpsCurrent = new GNSSReport();
     private LatLonAlt globalPosition = new LatLonAlt(0, 0, 0);
     private boolean gpsUpdated = false;
     private boolean reset = false;
-    private double pressureAltOffset = 0.0;
+    private float pressureAltOffset = 0.0f;
     // default sensor output noise levels
     private float noise_Acc = 0.05f;
     private float noise_Gyo = 0.01f;
     private float noise_Mag = 0.005f;
     private float noise_Prs = 0.01f;
-    private double magScale = 2.0;   // scaling factor for mag sensor
+    private float magScale = 2.0f;   // scaling factor for mag sensor
     private float ephHigh = 100.0f;  // starting GPS horizontal estimation accuracy
     private float ephLow = 0.3f;     // final GPS horizontal estimation accuracy
     private float epvHigh = 100.0f;  // starting GPS vertical estimation accuracy
@@ -72,7 +73,7 @@ public class SimpleSensors implements Sensors {
         initFilters();
     }
 
-    public void setPressureAltOffset(double pressureAltOffset) {
+    public void setPressureAltOffset(float pressureAltOffset) {
         this.pressureAltOffset = pressureAltOffset;
     }
 
@@ -92,11 +93,11 @@ public class SimpleSensors implements Sensors {
         this.noise_Prs = noise_Prs;
     }
 
-    public double getMagScale() {
+    public float getMagScale() {
         return magScale;
     }
 
-    public void setMagScale(double magScale) {
+    public void setMagScale(float magScale) {
         this.magScale = magScale;
     }
 
@@ -110,9 +111,9 @@ public class SimpleSensors implements Sensors {
 
     @Override
     public Vector3d getAcc() {
-        Vector3d accBody = new Vector3d(object.getAcceleration());
+        Vector3d accBody =object.getAcceleration();
         accBody.sub(object.getWorld().getEnvironment().getG());
-        Matrix3d rot = new Matrix3d(object.getRotation());
+        Matrix3d rot = object.getRotation();
         rot.transpose();
         rot.transform(accBody);
         accBody = addZeroMeanNoise(accBody, noise_Acc);
@@ -127,7 +128,7 @@ public class SimpleSensors implements Sensors {
     @Override
     public Vector3d getMag() {
         Vector3d mag = new Vector3d(object.getWorld().getEnvironment().getMagField(object.getPosition()));
-        Matrix3d rot = new Matrix3d(object.getRotation());
+        Matrix3d rot = object.getRotation();
         rot.transpose();
         rot.transform(mag);
         mag.scale(magScale);
@@ -176,17 +177,19 @@ public class SimpleSensors implements Sensors {
         if (gpsStartTime > -1 && t > gpsStartTime && gpsNext <= t) {
             gpsNext = t + gpsInterval;
             gpsUpdated = true;
-            GNSSReport gpsCurrent = new GNSSReport();
             eph = (float)ephFilter.filter(ephLow);
             epv = (float)epvFilter.filter(epvLow);
             
             gpsCurrent.position = globalPosition; //LatLonAlt.fromVector3d(addZeroMeanNoise(globalPosition.toVector3d(), 0.000001));
             gpsCurrent.eph = eph;
             gpsCurrent.epv = epv;
-            gpsCurrent.velocity = new Vector3d(object.getVelocity());
+            gpsCurrent.velocity = object.getVelocity();
             gpsCurrent.fix = eph <= fix3Deph ? 3 : eph <= fix2Deph ? 2 : 0;
             gpsCurrent.time = System.currentTimeMillis() * 1000;
-            gps = gpsDelayLine.getOutput(t, gpsCurrent);
+            if (gpsDelayLine.getDelay() > 0d)
+                gps = gpsDelayLine.getOutput(t, gpsCurrent);
+            else
+                gps = gpsCurrent;
         }
     }
     

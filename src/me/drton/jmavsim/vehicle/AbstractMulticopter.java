@@ -116,7 +116,7 @@ public abstract class AbstractMulticopter extends AbstractVehicle {
             f.z -= rotors[i].getThrust();
         }
         rotation.transform(f);
-        Vector3d airSpeed = new Vector3d(getVelocity());
+        Vector3d airSpeed = getVelocity();
         airSpeed.scale(-1.0);
         if (!ignoreWind)
             airSpeed.add(getWorld().getEnvironment().getCurrentWind(position));

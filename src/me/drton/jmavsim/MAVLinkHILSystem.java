@@ -5,21 +5,31 @@ import me.drton.jmavlib.mavlink.MAVLinkSchema;
 import me.drton.jmavsim.vehicle.AbstractVehicle;
 
 import javax.vecmath.Vector3d;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MAVLinkHILSystem is MAVLink bridge between AbstractVehicle and autopilot connected via MAVLink.
  * MAVLinkHILSystem should have the same sysID as the autopilot, but different componentId.
  */
 public class MAVLinkHILSystem extends MAVLinkSystem {
+    public static final int SENSOR_MSG_FREQ = 400;  // [Hz]
     private AbstractVehicle vehicle;
     private boolean gotHeartBeat = false;
     private boolean inited = false;
     private boolean stopped = false;
     private long initTime = 0;
     private long initDelay = 500;
+    private static int sensorMsgInterval;  // [us]
+    private ScheduledFuture<?> msgThreadHandle = null;
+    private ScheduledExecutorService executor;
+    SensorMessageThread msgThread;
 
     /**
      * Create MAVLinkHILSimulator, MAVLink system that sends simulated sensors to autopilot and passes controls from
@@ -32,6 +42,8 @@ public class MAVLinkHILSystem extends MAVLinkSystem {
     public MAVLinkHILSystem(MAVLinkSchema schema, int sysId, int componentId, AbstractVehicle vehicle) {
         super(schema, sysId, componentId);
         this.vehicle = vehicle;
+        msgThread = new SensorMessageThread();
+        setSensorMsgFreq(SENSOR_MSG_FREQ);
     }
 
     @Override
@@ -78,6 +90,7 @@ public class MAVLinkHILSystem extends MAVLinkSystem {
             vehicle.getSensors().setGPSStartTime(System.currentTimeMillis() + 1000);
         stopped = false;
         inited = true;
+        toggleMsgThread(true);
     }
     
     public void endSim() {
@@ -92,62 +105,107 @@ public class MAVLinkHILSystem extends MAVLinkSystem {
         gotHeartBeat = false;
         stopped = true;
         vehicle.getSensors().setGPSStartTime(-1);
+        toggleMsgThread(false);
+    }
+    
+    public void setSensorMsgFreq(int freq) {
+        MAVLinkHILSystem.sensorMsgInterval = (int)1e6 / freq;
+        if (msgThreadHandle != null)
+            toggleMsgThread(true);
+    }
+
+    private void toggleMsgThread(boolean on) {
+        if (on) {
+            if (msgThreadHandle != null)
+                toggleMsgThread(false);
+            executor = Executors.newSingleThreadScheduledExecutor();
+            msgThreadHandle = executor.scheduleAtFixedRate(msgThread, 0, sensorMsgInterval, TimeUnit.MICROSECONDS);
+        }
+        else {
+            if (msgThreadHandle != null)
+                msgThreadHandle.cancel(true);
+            executor.shutdown();
+            msgThreadHandle = null;
+        }
     }
     
     @Override
     public void update(long t) {
         super.update(t);
-        long tu = t * 1000; // Time in us
-        
-        if (!this.inited)
-            return;
-
-        Sensors sensors = vehicle.getSensors();
-
-        // Sensors
-        MAVLinkMessage msg_sensor = new MAVLinkMessage(schema, "HIL_SENSOR", sysId, componentId);
-        msg_sensor.set("time_usec", tu);
-        Vector3d tv = sensors.getAcc();
-        msg_sensor.set("xacc", tv.x);
-        msg_sensor.set("yacc", tv.y);
-        msg_sensor.set("zacc", tv.z);
-        tv = sensors.getGyro();
-        msg_sensor.set("xgyro", tv.x);
-        msg_sensor.set("ygyro", tv.y);
-        msg_sensor.set("zgyro", tv.z);
-        tv = sensors.getMag();
-        msg_sensor.set("xmag", tv.x);
-        msg_sensor.set("ymag", tv.y);
-        msg_sensor.set("zmag", tv.z);
-        msg_sensor.set("pressure_alt", sensors.getPressureAlt());
-        msg_sensor.set("abs_pressure", sensors.getPressure() * 0.01);  // Pa to millibar
-        if (sensors.isReset()) {
-            msg_sensor.set("fields_updated", (1<<31));
-            sensors.setReset(false);
-        }
-        sendMessage(msg_sensor);
-
-        // GPS
-        if (sensors.isGPSUpdated()) {
-            GNSSReport gps = sensors.getGNSS();
-            if (gps != null && gps.position != null && gps.velocity != null) {
-                MAVLinkMessage msg_gps = new MAVLinkMessage(schema, "HIL_GPS", sysId, componentId);
-                msg_gps.set("time_usec", tu);
-                msg_gps.set("lat", (long) (gps.position.lat * 1e7));
-                msg_gps.set("lon", (long) (gps.position.lon * 1e7));
-                msg_gps.set("alt", (long) (gps.position.alt * 1e3));
-                msg_gps.set("vn", (int) (gps.velocity.x * 100));
-                msg_gps.set("ve", (int) (gps.velocity.y * 100));
-                msg_gps.set("vd", (int) (gps.velocity.z * 100));
-                msg_gps.set("eph", (int) (gps.eph * 100f));
-                msg_gps.set("epv", (int) (gps.epv * 100f));
-                msg_gps.set("vel", (int) (gps.getSpeed() * 100));
-                msg_gps.set("cog", (int) Math.toDegrees(gps.getCog()) * 100);
-                msg_gps.set("fix_type", gps.fix);
-                msg_gps.set("satellites_visible", 10);
-                sendMessage(msg_gps);
-            }
-        }
     }
 
+    private final class SensorMessageThread implements Runnable {
+        Vector3d vect;
+        MAVLinkMessage msg_sensor = new MAVLinkMessage(schema, "HIL_SENSOR", sysId, componentId);
+        MAVLinkMessage msg_gps = new MAVLinkMessage(schema, "HIL_GPS", sysId, componentId);
+        private long startTime = System.nanoTime();
+
+        @Override
+        public void run() {
+            if (!inited)
+                return;
+
+            long tu = (System.nanoTime() - this.startTime) / 1000L;   // Time in us
+            
+            try {
+                Sensors sensors = vehicle.getSensors();
+                if (sensors == null)
+                    return;
+    
+                // Sensors
+                msg_sensor.set("time_usec", tu);
+                vect = sensors.getAcc();
+                msg_sensor.set("xacc", vect.x);
+                msg_sensor.set("yacc", vect.y);
+                msg_sensor.set("zacc", vect.z);
+                vect = sensors.getGyro();
+                msg_sensor.set("xgyro", vect.x);
+                msg_sensor.set("ygyro", vect.y);
+                msg_sensor.set("zgyro", vect.z);
+                vect = sensors.getMag();
+                msg_sensor.set("xmag", vect.x);
+                msg_sensor.set("ymag", vect.y);
+                msg_sensor.set("zmag", vect.z);
+                msg_sensor.set("pressure_alt", sensors.getPressureAlt());
+                msg_sensor.set("abs_pressure", sensors.getPressure() * 0.01);  // Pa to millibar
+                if (sensors.isReset()) {
+                    msg_sensor.set("fields_updated", (1<<31));
+                    sensors.setReset(false);
+                } else
+                    msg_sensor.set("fields_updated", 0);
+                sendMessage(msg_sensor);
+    
+                // GPS
+                if (sensors.isGPSUpdated()) {
+                    GNSSReport gps = sensors.getGNSS();
+                    if (gps == null || gps.position == null || gps.velocity == null)
+                        return;
+                    
+                    msg_gps.set("time_usec", tu);
+                    msg_gps.set("lat", (long) (gps.position.lat * 1e7));
+                    msg_gps.set("lon", (long) (gps.position.lon * 1e7));
+                    msg_gps.set("alt", (long) (gps.position.alt * 1e3));
+                    msg_gps.set("vn", (int) (gps.velocity.x * 100));
+                    msg_gps.set("ve", (int) (gps.velocity.y * 100));
+                    msg_gps.set("vd", (int) (gps.velocity.z * 100));
+                    msg_gps.set("eph", (int) (gps.eph * 100f));
+                    msg_gps.set("epv", (int) (gps.epv * 100f));
+                    msg_gps.set("vel", (int) (gps.getSpeed() * 100));
+                    msg_gps.set("cog", (int) Math.toDegrees(gps.getCog()) * 100);
+                    msg_gps.set("fix_type", gps.fix);
+                    msg_gps.set("satellites_visible", 10);
+                    sendMessage(msg_gps);
+                    
+                }
+                
+            }
+            catch (Exception e) {
+                System.err.println("Exception in MAVLinkHILSystem.SensorMessageThread");
+                e.printStackTrace();
+                endSim();
+            }
+        }
+            
+    }  // SensorMessageThread class
+    
 }

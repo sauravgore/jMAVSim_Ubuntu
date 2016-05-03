@@ -87,22 +87,20 @@ public class UDPMavLinkPort extends MAVLinkPort {
             while (addresses.hasMoreElements()) {
                 InetAddress address = addresses.nextElement();
                 if (!address.isLoopbackAddress()) {
-                    if (address.isSiteLocalAddress()) {
+                    if (address.isSiteLocalAddress())
                         // probably a good one!
                         return address;
-                    } else {
-                        // Found a non-loopback address that isn't site local.
-                        // Might be link local (private network), but probably better than nothing.
-                        possibleAddress = address;
-                        // Return the first IPV4 address we find.
-                        if(address instanceof Inet4Address) {
-                            return address;
-                        } else {
-                            System.out.println("Found a non-IPv4 address: " + address);
-                            // IPv6 may cause the system to crash
-                            possibleAddress = null;
-                        }
-                    }
+
+                    // Found a non-loopback address that isn't site local.
+                    // Might be link local (private network), but probably better than nothing.
+                    possibleAddress = address;
+                    // Return the first IPV4 address we find.
+                    if(address instanceof Inet4Address) 
+                        return address;
+
+                    System.out.println("Found a non-IPv4 address: " + address);
+                    // IPv6 may cause the system to crash
+                    possibleAddress = null;
                 }
             }
         }
@@ -137,12 +135,11 @@ public class UDPMavLinkPort extends MAVLinkPort {
     public void handleMessage(MAVLinkMessage msg) {
         if (debug) System.out.println("[handleMessage] msg.name: " + msg.getMsgName() + ", type: " + msg.getMsgType());
 
-        try {
-            /*SocketAddress remote =*/ channel.getRemoteAddress();
-        } catch (IOException e) {
-            System.err.println(e.toString());
-        }
-
+//        try {
+//            /*SocketAddress remote =*/ channel.getRemoteAddress();
+//        } catch (IOException e) {
+//            System.err.println(e.toString());
+//        }
 
         if (isOpened()) {
             try {

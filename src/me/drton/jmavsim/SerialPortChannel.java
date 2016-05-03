@@ -25,9 +25,9 @@ public class SerialPortChannel implements ByteChannel {
             if (b != null) {
                 buffer.put(b);
                 return b.length;
-            } else {
-                return 0;
             }
+            return 0;
+
         } catch (SerialPortException e) {
             throw new IOException(e);
         }

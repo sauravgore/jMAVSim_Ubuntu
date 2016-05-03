@@ -25,12 +25,12 @@ import java.net.URL;
 public abstract class KinematicObject extends WorldObject {
     protected boolean ignoreGravity = false;
     protected boolean ignoreWind = false;
-    protected Vector3d position = new Vector3d();
-    protected Vector3d velocity = new Vector3d();
-    protected Vector3d acceleration = new Vector3d();
-    protected Matrix3d rotation = new Matrix3d();
-    protected Vector3d rotationRate = new Vector3d();
-    protected Vector3d attitude = new Vector3d();
+    protected volatile Vector3d position = new Vector3d();
+    protected volatile Vector3d velocity = new Vector3d();
+    protected volatile Vector3d acceleration = new Vector3d();
+    protected volatile Matrix3d rotation = new Matrix3d();
+    protected volatile Vector3d rotationRate = new Vector3d();
+    protected volatile Vector3d attitude = new Vector3d();
 
     protected Transform3D transform;
     protected TransformGroup transformGroup;
@@ -106,7 +106,7 @@ public abstract class KinematicObject extends WorldObject {
     }
 
     public Vector3d getPosition() {
-        return position;
+        return (Vector3d) position.clone();
     }
 
     public void setPosition(Vector3d position) {
@@ -114,7 +114,7 @@ public abstract class KinematicObject extends WorldObject {
     }
 
     public Vector3d getVelocity() {
-        return velocity;
+        return (Vector3d) velocity.clone();
     }
 
     public void setVelocity(Vector3d vel) {
@@ -122,7 +122,7 @@ public abstract class KinematicObject extends WorldObject {
     }
 
     public Vector3d getAcceleration() {
-        return acceleration;
+        return (Vector3d) acceleration.clone();
     }
 
     public void setAcceleration(Vector3d acc) {
@@ -130,7 +130,7 @@ public abstract class KinematicObject extends WorldObject {
     }
 
     public Matrix3d getRotation() {
-        return rotation;
+        return (Matrix3d) rotation.clone();
     }
 
     public void setRotation(Matrix3d rotation) {
@@ -138,7 +138,7 @@ public abstract class KinematicObject extends WorldObject {
     }
 
     public Vector3d getRotationRate() {
-        return rotationRate;
+        return (Vector3d) rotationRate.clone();
     }
 
     public void setRotationRate(Vector3d rate) {

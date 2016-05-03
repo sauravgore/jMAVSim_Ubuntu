@@ -3,23 +3,6 @@
   <component name="AntConfiguration">
     <buildFile url="file://$PROJECT_DIR$/build.xml" />
   </component>
-  <component name="ArtifactManager">
-    <artifact type="jar" name="jMAVSim:jar">
-      <output-path>$PROJECT_DIR$/out/artifacts/jMAVSim_jar</output-path>
-      <root id="archive" name="jMAVSim.jar">
-        <element id="directory" name="META-INF">
-          <element id="file-copy" path="$PROJECT_DIR$/src/META-INF/MANIFEST.MF" />
-        </element>
-        <element id="module-output" name="jMAVSim" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/jssc.jar" path-in-jar="/" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/j3dcore.jar" path-in-jar="/" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/vecmath.jar" path-in-jar="/" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/j3dutils.jar" path-in-jar="/" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/org.mavlink.util-1.0.0.jar" path-in-jar="/" />
-        <element id="extracted-dir" path="$PROJECT_DIR$/lib/org.mavlink.library-1.0.0.jar" path-in-jar="/" />
-      </root>
-    </artifact>
-  </component>
   <component name="CompilerConfiguration">
     <option name="DEFAULT_COMPILER" value="Javac" />
     <resourceExtensions />
@@ -175,12 +158,11 @@
       <module fileurl="file://$PROJECT_DIR$/jMAVSim.iml" filepath="$PROJECT_DIR$/jMAVSim.iml" />
     </modules>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" assert-keyword="true" jdk-15="true" project-jdk-name="1.7" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_3" assert-keyword="false" jdk-15="false">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/jMAVlib" vcs="Git" />
   </component>
   <component name="libraryTable">
     <library name="lib">

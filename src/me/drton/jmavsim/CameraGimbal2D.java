@@ -33,6 +33,7 @@ public class CameraGimbal2D extends KinematicObject implements ReportingObject {
     private Sphere model;
     private TransformGroup gimbalTG;
     private Matrix3d rotM3d = new Matrix3d(); // temp storage
+    private boolean baseIsVehicle = false;
 
     public CameraGimbal2D(World world, String modelName) {
         super(world);
@@ -86,6 +87,7 @@ public class CameraGimbal2D extends KinematicObject implements ReportingObject {
     
     public void setBaseObject(DynamicObject object) {
         this.baseObject = object;
+        this.baseIsVehicle = (baseObject instanceof AbstractVehicle);
     }
 
     public Vector3d getPositionOffset() {
@@ -117,7 +119,7 @@ public class CameraGimbal2D extends KinematicObject implements ReportingObject {
         this.position = (Vector3d) baseObject.position.clone();
         this.attitude = (Vector3d) baseObject.attitude.clone();
         this.rotation.rotZ(this.attitude.z);
-        if ((pitchChannel >= 0 || rollChannel >= 0) && baseObject instanceof AbstractVehicle && ((AbstractVehicle) baseObject).getControl().size() > 0) {
+        if ((pitchChannel >= 0 || rollChannel >= 0) && baseIsVehicle) {
             // Control camera pitch/roll
             List<Double> control = ((AbstractVehicle) baseObject).getControl();
 

@@ -10,7 +10,7 @@ import javax.vecmath.Vector3d;
  */
 public abstract class DynamicObject extends KinematicObject {
     protected long lastTime = -1;
-    protected double mass = 1.0;
+    protected float mass = 1.0f;
     protected Matrix3d momentOfInertia = new Matrix3d();
     protected Matrix3d momentOfInertiaInv = new Matrix3d();
     
@@ -27,11 +27,11 @@ public abstract class DynamicObject extends KinematicObject {
         momentOfInertiaInv.rotZ(0.0);
     }
 
-    public double getMass() {
+    public float getMass() {
         return mass;
     }
 
-    public void setMass(double mass) {
+    public void setMass(float mass) {
         this.mass = mass;
     }
 
@@ -52,7 +52,7 @@ public abstract class DynamicObject extends KinematicObject {
             position.add(tmpVec);
             // Velocity
             acceleration = getForce();
-            acceleration.scale(1.0 / mass);
+            acceleration.scale(1.0f / mass);
             if (!ignoreGravity)
                 acceleration.add(getWorld().getEnvironment().getG());
             if (position.z >= grnd && velocity.z + acceleration.z * dt >= 0.0) {

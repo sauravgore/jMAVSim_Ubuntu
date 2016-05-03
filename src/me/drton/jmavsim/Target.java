@@ -5,7 +5,6 @@ import me.drton.jmavlib.geo.GlobalPositionProjector;
 import me.drton.jmavlib.geo.LatLonAlt;
 
 import javax.vecmath.Vector3d;
-import java.io.FileNotFoundException;
 
 /**
  * User: ton Date: 01.02.14 Time: 22:12
@@ -13,7 +12,7 @@ import java.io.FileNotFoundException;
 public abstract class Target extends KinematicObject {
     private GlobalPositionProjector gpsProjector = new GlobalPositionProjector();
 
-    public Target(World world, double size) throws FileNotFoundException {
+    public Target(World world, double size) {
         super(world);
         Sphere sphere = new Sphere((float) size);
         transformGroup.addChild(sphere);
